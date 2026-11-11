@@ -1,5 +1,6 @@
 "use client";
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
+import {createClient, type SupabaseClient, type User} from '@supabase/supabase-js';
 
 type Team = 'red'|'blue';
 const missions:Record<Team,[string,string][]> = {
@@ -8,11 +9,52 @@ const missions:Record<Team,[string,string][]> = {
 };
 export default function Home(){
  const [team,setTeam]=useState<Team>('red');
+ const [client,setClient]=useState<SupabaseClient|null>(null);
+ const [user,setUser]=useState<User|null>(null);
+ const [email,setEmail]=useState('');
+ const [password,setPassword]=useState('');
+ const [authMode,setAuthMode]=useState<'login'|'signup'>('login');
+ const [authMessage,setAuthMessage]=useState('');
+ const [authBusy,setAuthBusy]=useState(false);
+ useEffect(()=>{
+  const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if(!url||!key){setAuthMessage('Supabaseの環境変数が未設定です。');return;}
+  const supabase=createClient(url,key);
+  setClient(supabase);
+  supabase.auth.getUser().then(({data})=>setUser(data.user)).catch(()=>setAuthMessage('認証状態を確認できませんでした。'));
+  const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>setUser(session?.user??null));
+  return ()=>subscription.unsubscribe();
+ },[]);
+ const submitAuth=async(e:React.FormEvent<HTMLFormElement>)=>{
+  e.preventDefault();if(!client)return;
+  setAuthBusy(true);setAuthMessage('');
+  try{
+   const result=authMode==='signup' ? await client.auth.signUp({email,password}) : await client.auth.signInWithPassword({email,password});
+   if(result.error)throw result.error;
+   setAuthMessage(authMode==='signup'&&!result.data.session?'確認メールを送信しました。メール内のリンクから登録を完了してください。':'認証しました。');
+   setPassword('');
+  }catch(err){setAuthMessage(err instanceof Error?err.message:'認証に失敗しました。');}
+  finally{setAuthBusy(false);}
+ };
+ const logout=async()=>{if(!client)return;const {error}=await client.auth.signOut();if(error)setAuthMessage(error.message);};
  const [stage,setStage]=useState(0);
  const choose=(t:Team)=>{setTeam(t);setStage(0)};
  return <>
  <header><div className="wrap head"><h1>⚡ <span>GRID LAB</span> <small>/ LINUX CYBER RANGE v3</small></h1><div id="connection">● VERCEL / PREVIEW MODE</div></div></header>
  <main className="wrap">
+ <section className="panel" aria-label="ユーザー認証" style={{marginTop:16}}>
+  <h2>アカウント</h2>
+  {user?<div><p>ログイン中：{user.email}</p><button onClick={logout}>ログアウト</button></div>:
+   <form onSubmit={submitAuth} style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'center'}}>
+    <input aria-label="メールアドレス" type="email" placeholder="メールアドレス" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} style={{padding:10}}/>
+    <input aria-label="パスワード" type="password" placeholder="パスワード（6文字以上）" minLength={6} autoComplete={authMode==='signup'?'new-password':'current-password'} required value={password} onChange={e=>setPassword(e.target.value)} style={{padding:10}}/>
+    <button type="submit" disabled={!client||authBusy}>{authMode==='signup'?'新規登録':'ログイン'}</button>
+    <button type="button" onClick={()=>{setAuthMode(authMode==='signup'?'login':'signup');setAuthMessage('');}}>{authMode==='signup'?'ログインへ切替':'新規登録へ切替'}</button>
+   </form>}
+  <p role="status">{authMessage}</p>
+  <p className="hint">演習ターミナルとFLAG判定は引き続き無効です。ログインだけではDockerに接続できません。</p>
+ </section>
  <nav className="actions" aria-label="演習メニュー">
  <button className={team==='red'?'selected':''} onClick={()=>choose('red')}>RED TEAM / 攻撃者</button>
  <button className={team==='blue'?'selected':''} onClick={()=>choose('blue')}>BLUE TEAM / 防御者</button>
