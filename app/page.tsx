@@ -1,4 +1,5 @@
 "use client";
+import LinuxTerminal from "./LinuxTerminal";
 import {useEffect,useState} from 'react';
 import {createClient, type SupabaseClient, type User} from '@supabase/supabase-js';
 

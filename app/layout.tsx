@@ -1,3 +1,4 @@
+import "@xterm/xterm/css/xterm.css";
 import type { Metadata } from 'next';
 import './globals.css';
 export const metadata: Metadata = { title: 'GRID LAB v3', description: '架空の変電所を舞台にしたサイバーセキュリティ演習プレビュー' };
