@@ -222,7 +222,42 @@ export default function LinuxTerminal({ client, userId }: Props) {
     }
   }
 
+  
   return (
-    <LinuxTerminal client={client} userId={user?.id ?? null} />
+    <section className="panel">
+      <div className="terminalHeading">
+        <h2>Linuxターミナル</h2>
+        <span>● {status}</span>
+      </div>
+
+      <p className="hint">
+        Raspberry PiのDocker環境に接続します。
+      </p>
+
+      <div
+        id="terminal"
+        ref={containerRef}
+        style={{ padding: 8, overflow: "hidden" }}
+      />
+
+      <div className="terminalButtons">
+        <button
+          onClick={connect}
+          disabled={!client || !userId || !initialized}
+        >
+          接続 / 再接続
+        </button>
+        <button onClick={() => terminalRef.current?.clear()}>
+          画面クリア
+        </button>
+        <button onClick={() => sendInput("\x03")}>
+          Ctrl+C
+        </button>
+        <button onClick={disconnect}>
+          切断
+        </button>
+      </div>
+    </section>
   );
+
 }
