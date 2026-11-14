@@ -6,12 +6,21 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Terminal } from "@xterm/xterm";
 import type { FitAddon } from "@xterm/addon-fit";
 
+type Team = "red" | "blue";
+
 type Props = {
   client: SupabaseClient | null;
   userId: string | null;
+  team: Team;
+  stage: number;
 };
 
-export default function LinuxTerminal({ client, userId }: Props) {
+export default function LinuxTerminal({
+  client,
+  userId,
+  team,
+  stage
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -23,6 +32,7 @@ export default function LinuxTerminal({ client, userId }: Props) {
 
   const endpoint = process.env.NEXT_PUBLIC_TERMINAL_WS_URL;
 
+  // ターミナル初期化
   useEffect(() => {
     let disposed = false;
     let term: Terminal | null = null;
@@ -58,21 +68,38 @@ export default function LinuxTerminal({ client, userId }: Props) {
       fitRef.current = fit;
 
       term.writeln("GRID LAB v3 - Linux Cyber Range");
-      term.writeln("ログイン後に接続ボタンを押してください。\r\n");
+      term.writeln(
+        `演習環境: ${team.toUpperCase()} TEAM / STAGE ${stage}`
+      );
+      term.writeln("接続ボタンを押してください。\r\n");
 
       term.onData(data => {
         const ws = socketRef.current;
-        if (readyRef.current && ws?.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "input", data }));
+
+        if (
+          readyRef.current &&
+          ws?.readyState === WebSocket.OPEN
+        ) {
+          ws.send(JSON.stringify({
+            type: "input",
+            data
+          }));
         }
       });
 
       observer = new ResizeObserver(() => {
         if (!term || !containerRef.current) return;
+
         try {
           fit.fit();
-          if (readyRef.current) {
-            socketRef.current?.send(JSON.stringify({
+
+          const ws = socketRef.current;
+
+          if (
+            readyRef.current &&
+            ws?.readyState === WebSocket.OPEN
+          ) {
+            ws.send(JSON.stringify({
               type: "resize",
               cols: term.cols,
               rows: term.rows
@@ -82,23 +109,32 @@ export default function LinuxTerminal({ client, userId }: Props) {
       });
 
       observer.observe(containerRef.current);
+
       setInitialized(true);
     }
 
-    initialize().catch(() => setStatus("TERMINAL ERROR"));
+    initialize().catch(() => {
+      if (!disposed) {
+        setStatus("TERMINAL ERROR");
+      }
+    });
 
     return () => {
       disposed = true;
       readyRef.current = false;
+
       socketRef.current?.close();
       socketRef.current = null;
+
       observer?.disconnect();
       term?.dispose();
+
       terminalRef.current = null;
       fitRef.current = null;
     };
-  }, []);
+  }, [team, stage]);
 
+  // ログアウト時は接続を終了
   useEffect(() => {
     if (!userId) {
       readyRef.current = false;
@@ -123,89 +159,118 @@ export default function LinuxTerminal({ client, userId }: Props) {
 
     setStatus("認証情報を取得中...");
 
-    const { data, error } = await client.auth.getSession();
+    try {
+      const { data, error } = await client.auth.getSession();
 
-    if (error || !data.session ||
-        data.session.user.id !== userId) {
-      setStatus("再ログインが必要です");
-      return;
-    }
-
-    const token = data.session.access_token;
-    const ws = new WebSocket(endpoint);
-    socketRef.current = ws;
-
-    terminalRef.current?.clear();
-    terminalRef.current?.writeln("GRID LAB - 接続中...\r\n");
-    setStatus("CONNECTING");
-
-    ws.onmessage = event => {
-      if (socketRef.current !== ws) return;
-
-      let message: { type?: string; data?: string };
-      try {
-        message = JSON.parse(event.data);
-      } catch {
+      if (
+        error ||
+        !data.session ||
+        data.session.user.id !== userId
+      ) {
+        setStatus("再ログインが必要です");
         return;
       }
 
-      if (message.type === "status") {
-        if (message.data === "auth_required") {
-          ws.send(JSON.stringify({
-            type: "auth",
-            access_token: token
-          }));
-          setStatus("AUTHENTICATING");
+      const token = data.session.access_token;
+      const ws = new WebSocket(endpoint);
+
+      socketRef.current = ws;
+
+      terminalRef.current?.clear();
+      terminalRef.current?.writeln(
+        `GRID LAB / ${team.toUpperCase()} STAGE ${stage}`
+      );
+      terminalRef.current?.writeln(
+        "Docker環境に接続中...\r\n"
+      );
+
+      setStatus("CONNECTING");
+
+      ws.onmessage = event => {
+        if (socketRef.current !== ws) return;
+
+        let message: {
+          type?: string;
+          data?: string;
+        };
+
+        try {
+          message = JSON.parse(event.data);
+        } catch {
+          return;
         }
 
-        if (message.data === "starting") {
-          setStatus("DOCKER STARTING");
-        }
-
-        if (message.data === "connected") {
-          readyRef.current = true;
-          setStatus("CONNECTED");
-
-          const term = terminalRef.current;
-          if (term) {
+        if (message.type === "status") {
+          if (message.data === "auth_required") {
             ws.send(JSON.stringify({
-              type: "resize",
-              cols: term.cols,
-              rows: term.rows
+              type: "auth",
+              access_token: token,
+              team,
+              stage
             }));
-            term.focus();
+
+            setStatus("AUTHENTICATING");
+          }
+
+          if (message.data === "starting") {
+            setStatus("DOCKER STARTING");
+          }
+
+          if (message.data === "connected") {
+            readyRef.current = true;
+            setStatus("CONNECTED");
+
+            const term = terminalRef.current;
+
+            if (term) {
+              ws.send(JSON.stringify({
+                type: "resize",
+                cols: term.cols,
+                rows: term.rows
+              }));
+
+              term.focus();
+            }
           }
         }
-      }
 
-      if (message.type === "output" &&
-          typeof message.data === "string") {
-        terminalRef.current?.write(message.data);
-      }
+        if (
+          message.type === "output" &&
+          typeof message.data === "string"
+        ) {
+          terminalRef.current?.write(message.data);
+        }
 
-      if (message.type === "error") {
+        if (message.type === "error") {
+          terminalRef.current?.writeln(
+            "\r\n[ERROR] " +
+            (message.data ?? "不明なエラー")
+          );
+
+          setStatus("ERROR");
+        }
+      };
+
+      ws.onerror = () => {
+        if (socketRef.current === ws) {
+          setStatus("CONNECTION ERROR");
+        }
+      };
+
+      ws.onclose = () => {
+        if (socketRef.current !== ws) return;
+
+        socketRef.current = null;
+        readyRef.current = false;
+        setStatus("DISCONNECTED");
+
         terminalRef.current?.writeln(
-          "\r\n[ERROR] " + (message.data ?? "不明なエラー")
+          "\r\n[接続が終了しました]"
         );
-        setStatus("ERROR");
-      }
-    };
-
-    ws.onerror = () => {
-      if (socketRef.current === ws) {
-        setStatus("CONNECTION ERROR");
-      }
-    };
-
-    ws.onclose = () => {
-      if (socketRef.current !== ws) return;
-      socketRef.current = null;
-      readyRef.current = false;
-      setStatus("DISCONNECTED");
-      terminalRef.current?.writeln(
-        "\r\n[接続が終了しました]"
-      );
-    };
+      };
+    } catch {
+      setStatus("CONNECTION ERROR");
+    }
   }
 
   function disconnect() {
@@ -217,27 +282,39 @@ export default function LinuxTerminal({ client, userId }: Props) {
 
   function sendInput(data: string) {
     const ws = socketRef.current;
-    if (readyRef.current && ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "input", data }));
+
+    if (
+      readyRef.current &&
+      ws?.readyState === WebSocket.OPEN
+    ) {
+      ws.send(JSON.stringify({
+        type: "input",
+        data
+      }));
     }
   }
 
-  
   return (
     <section className="panel">
       <div className="terminalHeading">
-        <h2>Linuxターミナル</h2>
+        <h2>
+          Linuxターミナル
+        </h2>
         <span>● {status}</span>
       </div>
 
       <p className="hint">
-        Raspberry PiのDocker環境に接続します。
+        {team.toUpperCase()} TEAM /
+        STAGE {stage} 専用Docker環境
       </p>
 
       <div
         id="terminal"
         ref={containerRef}
-        style={{ padding: 8, overflow: "hidden" }}
+        style={{
+          padding: 8,
+          overflow: "hidden"
+        }}
       />
 
       <div className="terminalButtons">
@@ -247,17 +324,23 @@ export default function LinuxTerminal({ client, userId }: Props) {
         >
           接続 / 再接続
         </button>
-        <button onClick={() => terminalRef.current?.clear()}>
+
+        <button
+          onClick={() => terminalRef.current?.clear()}
+        >
           画面クリア
         </button>
-        <button onClick={() => sendInput("\x03")}>
+
+        <button
+          onClick={() => sendInput("\x03")}
+        >
           Ctrl+C
         </button>
+
         <button onClick={disconnect}>
           切断
         </button>
       </div>
     </section>
   );
-
 }
