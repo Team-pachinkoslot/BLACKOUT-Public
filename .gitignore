@@ -17,3 +17,4 @@ home-auth.css
 add_home_login.py
 apply.py
 fix_gridlab_auth_header.py
+.vercel
