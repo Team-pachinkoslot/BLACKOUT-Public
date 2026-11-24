@@ -7,12 +7,12 @@ export const labCatalog: readonly Lab[] = [
     slug: "water-treatment",
     title: "浄水場へのサイバー攻撃",
     description:
-      "水位・水圧・ポンプ・バルブに関する異常を調査し、模擬設備を安全な状態に戻すことを目標とする演習です。",
+      "架空の浄水場を舞台に、RED TEAMによる情報調査とBLUE TEAMによる異常検知・隔離・復旧を学ぶ演習です。",
     difficulty: "beginner",
-    status: "coming_soon",
+    status: "available",
     objectives: ["異常値の特定", "安全停止", "復旧"],
     assets: ["タンク", "ポンプ", "バルブ", "センサー"],
-    estimatedMinutes: 30,
+    estimatedMinutes: 50,
     levels: [
       {
         difficulty: "beginner",

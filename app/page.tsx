@@ -23,7 +23,7 @@ export default function Home() {
             <li><span>02</span><div><strong>防御する</strong><p>影響を抑え、安全な状態へ導く</p></div></li>
             <li><span>03</span><div><strong>復旧する</strong><p>安全を確認し、運用を取り戻す</p></div></li>
           </ol>
-          <p className="outline-footnote">実行可能な演習は架空の模擬変電所のみ</p>
+          <p className="outline-footnote">変電所と浄水場の2種類の演習を利用可能</p>
         </div>
       </section>
 
@@ -40,7 +40,7 @@ export default function Home() {
       </section>
 
       <section className="scope-panel" aria-labelledby="scope-title">
-        <div><p className="eyebrow">開発状況</p><h2 id="scope-title">演習を選んで、実際に操作する。</h2><p>変電設備はGRID LABで操作可能です。浄水場と鉄道は開発中です。</p></div>
+        <div><p className="eyebrow">開発状況</p><h2 id="scope-title">演習を選んで、実際に操作する。</h2><p>変電設備はGRID LAB、浄水場はPROJECT AQUAで演習できます。鉄道は開発中です。</p></div>
         <Link className="button button-outline" href="/dashboard">ダッシュボードを見る <span aria-hidden="true">→</span></Link>
       </section>
     </div>
