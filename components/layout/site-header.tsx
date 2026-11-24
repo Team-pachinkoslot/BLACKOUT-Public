@@ -8,6 +8,7 @@ const links = [
   { href: "/", label: "ホーム" },
   { href: "/labs", label: "演習一覧" },
   { href: "/dashboard", label: "ダッシュボード" },
+  { href: "/guide", label: "演習ガイド" },
 ];
 
 export function SiteHeader({ appName }: { appName: string }) {

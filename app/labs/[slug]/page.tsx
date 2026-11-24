@@ -47,7 +47,7 @@ export default async function LabDetailPage({ params }: Props) {
         <aside className="detail-aside">
           <section className="panel start-panel"><p className="eyebrow">演習環境</p>
             {lab.id === "power-01" ? <><h2>GRID LAB v3</h2><p>模擬変電所を題材に、RED/BLUEチームそれぞれ5ステージのLinux演習を体験できます。</p><Link className="button button-primary" href="/gridlab">演習を開始する →</Link><p className="small-note">Supabaseログインと演習サーバーへの接続が必要です。</p></>
-              : <><h2>演習は準備中です</h2><p id="runtime-explanation">この設備の実行環境は未実装です。</p><button type="button" disabled aria-describedby="runtime-explanation">演習開始（準備中）</button><p className="small-note">現在はシナリオの内容のみ確認できます。</p></>}
+              : lab.id === "water-01" ? <><h2>PROJECT AQUA</h2><p>浄水場を舞台にしたRED/BLUE演習です。模擬ターミナルを使った調査と、安全な復旧判断を学べます。</p><a className="button button-primary" href="https://project-aqua-alpha.vercel.app/labs/water-treatment">演習を開始する →</a><p className="small-note">PROJECT AQUAの外部サイトを開きます。進捗はICS Labとは別に保存されます。</p></> : <><h2>演習は準備中です</h2><p id="runtime-explanation">この設備の実行環境は未実装です。</p><button type="button" disabled aria-describedby="runtime-explanation">演習開始（準備中）</button><p className="small-note">現在はシナリオの内容のみ確認できます。</p></>}
           </section>
           <section className="panel caution-panel"><h2>注意事項</h2><ul><li>演習は隔離された架空の模擬環境で実施します。</li><li>実設備への通信・制御は行いません。</li><li>記載内容と学習時間は開発中の予定です。</li></ul></section>
         </aside>
