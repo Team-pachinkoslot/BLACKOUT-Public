@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ProgressDashboard from "@/components/dashboard/ProgressDashboard";
+import AquaProgress from "@/components/dashboard/AquaProgress";
 import { getLabs, getLabNumber } from "@/lib/labs/queries";
 import { statusLabels } from "@/lib/labs/types";
 
@@ -15,6 +16,7 @@ export default function DashboardPage() {
         <p>GRID LABのRED / BLUEステージの達成状況を確認できます。</p>
       </header>
       <ProgressDashboard />
+      <AquaProgress />
       <section className="panel">
         <div className="section-heading"><h2>演習の準備状況</h2></div>
         <ul className="lab-rows">
